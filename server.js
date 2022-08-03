@@ -1,5 +1,6 @@
 const http = require('http');
 const fs = require('fs');
+const { url } = require('inspector');
 
 /* ============================ SERVER DATA ============================ */
 let artists = JSON.parse(fs.readFileSync('./seeds/artists.json'));
@@ -68,6 +69,246 @@ const server = http.createServer((req, res) => {
     /* ========================== ROUTE HANDLERS ========================== */
 
     // Your code here
+
+    // delete success message
+    let deleteMessage = {"message": "Successfully deleted"}
+
+    // get artists
+    if (req.method === 'GET' && req.url === '/artists') {
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+      res.write(JSON.stringify(artists));
+      return res.end();
+    }
+
+    // get a specific artist by ID
+    if (req.method === 'GET' && req.url.startsWith('/artists/')) {
+      let urlParts = req.url.split('/');  //  ["", "artists", "1"]
+      if (urlParts.length === 3) {
+        let requestedId = urlParts[2];
+        let requestedArtist = artists[requestedId];
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.write(JSON.stringify(requestedArtist));
+        return res.end();
+      }
+    }
+
+    // add a new artist
+    if (req.method === 'POST' && req.url === '/artists') {
+      let latestId = getNewArtistId();
+      let latestArtist = {
+          "artistId": latestId,
+          "name": req.body.name };
+      artists[latestId] = latestArtist;
+      res.statusCode = 201;
+      res.setHeader('Content-Type', 'application/json');
+      res.write(JSON.stringify(latestArtist));
+      return res.end();
+    }
+
+    // edit a specific artist by ID
+    if ((req.method === 'PUT' || req.method === 'PATCH') && req.url.startsWith('/artists/')) {
+      let urlParts = req.url.split('/');  //  ["", "artists", "1"]
+      if (urlParts.length === 3) {
+        let requestedId = urlParts[2];
+        let requestedArtist = artists[requestedId];
+        requestedArtist.name = req.body.name;
+        requestedArtist.updatedAt = new Date();
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.write(JSON.stringify(requestedArtist));
+        return res.end();
+      }
+    }
+
+    // delete a specific artist by ID
+    if (req.method === 'DELETE' && req.url.startsWith('/artists/')) {
+      let urlParts = req.url.split('/');
+      if (urlParts.length === 3) {
+        let requestedId = urlParts[2];
+        delete artists[requestedId];
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.write(JSON.stringify(deleteMessage));
+        return res.end();
+      }
+    }
+
+    // function to find albums by artist ID
+    let findAlbumsByArtist = (id) => {
+      let matchingAlbums = [];
+      for (let album in albums) {
+        if (albums[album].artistId == id) {
+          matchingAlbums.push(albums[album]);
+        }
+      }
+      return matchingAlbums;
+    }
+
+    // get all albums of a specific artist by ID
+    if (req.method === 'GET' && req.url.startsWith('/artists/')) {
+      let urlParts = req.url.split('/');
+      if (urlParts.length === 4 && urlParts[3] === 'albums') {
+        let requestedId = urlParts[2];
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.write(JSON.stringify(findAlbumsByArtist(requestedId)));
+        return res.end();
+      }
+    }
+
+    // function to find album by albumId
+    let findAlbumsByAlbumId = (id) => {
+
+      let matchingAlbum = null;
+      for (let album in albums) {
+        if (albums[album].albumId == id) {
+          matchingAlbum = albums[album];
+        }
+      }
+      return matchingAlbum;
+    }
+
+    // get a specific album's details by albumId
+    if (req.method === 'GET' && req.url.startsWith('/albums/')) {
+      let urlParts = req.url.split('/');
+      if (urlParts.length === 3) {
+        let requestedId = urlParts[2];
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.write(JSON.stringify(findAlbumsByAlbumId(requestedId)));
+        return res.end();
+      }
+    }
+
+    // add an album to an artist by ID
+    if (req.method === 'POST' && req.url.startsWith('/artists/')) {
+      let urlParts = req.url.split('/');
+      if (urlParts.length === 4 && urlParts[3] === 'albums') {
+        let requestedId = urlParts[2];
+        let newAlbumId = getNewAlbumId();
+        let newAlbum = {
+          "albumId": newAlbumId,
+          "name": req.body.name,
+          "artistId": requestedId
+        }
+        albums[newAlbumId] = newAlbum;
+        res.statusCode = 201;
+        res.setHeader('Content-Type', 'application/json');
+        res.write(JSON.stringify(newAlbum));
+        return res.end();
+      }
+    }
+
+    // edit an album by albumId
+    if ((req.method === 'PATCH' || req.method === 'PUT') && req.url.startsWith('/albums/')) {
+      let urlParts = req.url.split('/');
+      if (urlParts.length === 3) {
+        let requestedId = urlParts[2];
+        let requestedAlbum = albums[requestedId];
+        requestedAlbum.name = req.body.name;
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.write(JSON.stringify(requestedAlbum));
+        return res.end();
+      }
+    }
+
+    // delete an album by albumId
+    if (req.method === 'DELETE' && req.url.startsWith('/albums/')) {
+      let urlParts = req.url.split('/');
+        if (urlParts.length === 3) {
+          let requestedId = urlParts[2];
+          delete albums[requestedId];
+
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.write(JSON.stringify(deleteMessage));
+          return res.end();
+        }
+    }
+
+
+
+    // function to find songs by artistId
+    let findSongsByArtist = (id) => {
+      let matchingSongs = [];
+
+      // find all albums by artist
+      let albumsByArtist = findAlbumsByArtist(id);
+      albumsByArtist = albumsByArtist.map(
+        album => album.albumId
+      );
+      // iterate through the songs object comparing albumIds
+      for (let song in songs) {
+        if (albumsByArtist.includes(songs[song].albumId)) {
+          matchingSongs.push(songs[song]);
+        }
+      }
+        return matchingSongs;
+    }
+
+    // get all songs of a specific artist based on artistId
+    if (req.method === 'GET' && req.url.startsWith('/artists/')) {
+      let urlParts = req.url.split('/');
+      if (urlParts.length === 4 && urlParts[3] === 'songs') {
+        let requestedId = urlParts[2];
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.write(JSON.stringify(findSongsByArtist(requestedId)));
+        return res.end();
+      }
+    }
+
+    // function to find songs by albumId
+    let findSongsByAlbum = (id) => {
+      let matchingSongs = [];
+
+      for (let song in songs) {
+        if (songs[song].albumId == id) {
+          matchingSongs.push(songs[song])
+        }
+      }
+      return matchingSongs;
+    }
+
+    // get all songs of a specified album by albumId
+    if (req.method === 'GET' && req.url.startsWith('/albums/')) {
+      let urlParts = req.url.split('/');
+      if (urlParts.length === 4 && urlParts[3] === 'songs') {
+        let requestedId = urlParts[2];
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.write(JSON.stringify(findSongsByAlbum(requestedId)));
+        return res.end();
+      }
+    }
+
+    // function to find songs by trackNumber
+    let findSongsByTrackNumber = (id) => {
+      let matchingSongs = [];
+      for (let song in songs) {
+        if (songs[song].trackNumber == id) {
+          matchingSongs.push(songs[song])
+        }
+      }
+      return matchingSongs;
+    }
+
+    // get all songs by trackNumber
+    if (req.method === 'GET' && req.url.startsWith('/trackNumbers/')) {
+      let urlParts = req.url.split('/');
+      if (urlParts.length === 4 && urlParts[3] === 'songs') {
+        let trackNumber = urlParts[2];
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.write(JSON.stringify(findSongsByTrackNumber(trackNumber)));
+        return res.end();
+      }
+    }
+
+    // get a songs details by songId
 
     res.statusCode = 404;
     res.setHeader('Content-Type', 'application/json');
