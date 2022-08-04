@@ -309,6 +309,74 @@ const server = http.createServer((req, res) => {
     }
 
     // get a songs details by songId
+    if (req.method === 'GET' && req.url.startsWith('/songs/')) {
+      let urlParts = req.url.split('/');
+      if (urlParts.length === 3)  {
+        let requestedId = urlParts[2];
+
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "application/json");
+        res.write(JSON.stringify(songs[requestedId]));
+        return res.end();
+      }
+    }
+
+    /*
+    "songId": 1,
+    "name": "Dani California",
+    "trackNumber": 1,
+    "albumId": 1,
+    "lyrics":
+    */
+
+    // add song to an album by albumId
+    if (req.method === 'POST' && req.url.startsWith('/albums/')) {
+      let urlParts = req.url.split('/');
+      if (urlParts.length === 4 && urlParts[3] === 'songs') {
+        let requestedId = urlParts[2];
+        let newId = getNewSongId();
+        let newSong = {
+          "songId": newId,
+          "name": req.body.name,
+          "trackNumber": req.body.trackNumber,
+          "albumId": requestedId,
+          "lyrics": req.body.lyrics
+        }
+        songs[newId] = newSong;
+        res.statusCode = 201;
+        res.setHeader("Content-Type", "application/json");
+        res.write(JSON.stringify(newSong));
+        return res.end()
+      }
+    }
+
+    // edit a song by songId
+    if ((req.method === 'PATCH' || req.method === 'PUT') && req.url.startsWith('/songs/')) {
+      let urlParts = req.url.split('/');
+      if (urlParts.length === 3) {
+        let requestedId = urlParts[2];
+        songs[requestedId].name = req.body.name;
+        songs[requestedId].lyrics = req.body.lyrics;
+        songs[requestedId].trackNumber = req.body.trackNumber;
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "application/json");
+        res.write(JSON.stringify(songs[requestedId]));
+        return res.end()
+      }
+    }
+
+    // delete song by songId
+    if (req.method === 'DELETE' && req.url.startsWith('/songs')) {
+      let urlParts = req.url.split('/');
+      if (urlParts.length === 3) {
+        let requestedId = urlParts[2];
+        delete songs[requestedId];
+        res.statusCode = 200;
+        res.setHeader("Content-Type","application/json");
+        res.write(JSON.stringify(deleteMessage));
+        return res.end();
+      }
+    }
 
     res.statusCode = 404;
     res.setHeader('Content-Type', 'application/json');
